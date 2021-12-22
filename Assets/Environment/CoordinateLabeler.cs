@@ -7,17 +7,21 @@ public class CoordinateLabeler : MonoBehaviour
 {
     [SerializeField] Color defaultColor = Color.white;
     [SerializeField] Color blockedColor = Color.gray;
+    [SerializeField] Color exploredColor = Color.yellow;
+    [SerializeField] Color pathColor = new Color(1f, 0.5f, 0f);
     
     TextMeshPro label;
     Vector2Int coordinates = new Vector2Int();
-    Waypoint waypoint;
+    GridManager gridManager;
+    Tile tile;
     
     private void Awake()
     {
+        gridManager = FindObjectOfType<GridManager>();
         label = GetComponent<TextMeshPro>();
         label.enabled = false;
+        tile = GetComponentInParent<Tile>();
 
-        waypoint = GetComponentInParent<Waypoint>();
         DisplayCoordinates();
     }
     
@@ -26,7 +30,7 @@ public class CoordinateLabeler : MonoBehaviour
         if (!Application.isPlaying)
         {
             DisplayCoordinates();
-            // UpdateObjectName();
+            UpdateObjectName();
             label.enabled = true;
         }
 
@@ -36,8 +40,10 @@ public class CoordinateLabeler : MonoBehaviour
 
     private void DisplayCoordinates()
     {
-        coordinates.x = Mathf.RoundToInt(transform.parent.position.x / UnityEditor.EditorSnapSettings.move.x);
-        coordinates.y = Mathf.RoundToInt(transform.parent.position.z / UnityEditor.EditorSnapSettings.move.z);
+        if (gridManager == null) return;
+
+        coordinates.x = Mathf.RoundToInt(transform.parent.position.x / gridManager.UnityGridSize);
+        coordinates.y = Mathf.RoundToInt(transform.parent.position.z / gridManager.UnityGridSize);
 
         label.text = $"{coordinates.x},{coordinates.y}";
     }
@@ -49,7 +55,41 @@ public class CoordinateLabeler : MonoBehaviour
 
     private void SetLabelColor()
     {
-        label.color = waypoint.IsPlaceable ? defaultColor : blockedColor;
+        if (!Application.isPlaying)
+        {
+            if (tile == null) return;
+
+            if (!tile.IsPlaceable)
+            {
+                label.color = blockedColor;
+            }
+            else
+            {
+                label.color = defaultColor;
+            }
+        }
+
+        if (gridManager == null) { return; }
+
+        Node node = gridManager.GetNode(coordinates);
+        if (node == null) return;
+
+        if (!node.isWalkable)
+        {
+            label.color = blockedColor;
+        }
+        else if (node.isPath)
+        {
+            label.color = pathColor;
+        }
+        else if (node.isExplored)
+        {
+            label.color = exploredColor;
+        }
+        else
+        {
+            label.color = defaultColor;
+        }
     }
 
     private void ToggleLabels()
